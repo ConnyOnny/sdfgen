@@ -2,6 +2,7 @@
 name = "sdfgen"
 version = "0.0.1"
 dependencies = [
+ "byteorder 0.3.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "getopts 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "image 0.3.10 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

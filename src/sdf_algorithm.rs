@@ -36,10 +36,10 @@ pub fn sdf_to_grayscale_image(src: &SDFImage, max_expressable_dst: DstT) -> Box<
 	let fun = |x:u32,y:u32| -> image::Luma<u8> {
 			let mut dst : DstT = src.get_pixel(x,y).data[0];
 			dst = dst / max_expressable_dst * (127 as DstT);
-			if dst < (i8::min_value() as DstT) {
-				dst = i8::min_value() as DstT;
-			} else if dst > (i8::max_value() as DstT) {
-				dst = i8::max_value() as DstT;
+			if dst < (-127 as DstT) {
+				dst = -127 as DstT;
+			} else if dst > (127 as DstT) {
+				dst = 127 as DstT;
 			}
 			debug_assert!(dst <= ( 127 as DstT));
 			debug_assert!(dst >= (-127 as DstT));
@@ -106,7 +106,10 @@ pub fn calculate_sdf(mm: &Mipmap, size: u32) -> Box<SDFImage> {
 				}
 			} // done with tasks
 			// use high precision math here to avoid rounding errors
-			let best_dst : DstT = (best_dst_sqr as f64).sqrt() as DstT;
+			let mut best_dst : DstT = (best_dst_sqr as f64).sqrt() as DstT;
+			if !px_is_white {
+				best_dst *= -1 as DstT;
+			}
 			results.put_pixel(x,y,image::Luma{data:[best_dst]});
 		}
 	}

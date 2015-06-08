@@ -1,10 +1,16 @@
 extern crate image;
 extern crate getopts;
+extern crate byteorder;
 extern crate sdfgen;
+
+use std::fs::File;
+use std::io::Write;
 
 use image::GrayImage;
 
 use getopts::Options;
+
+use byteorder::{LittleEndian, WriteBytesExt};
 
 use sdfgen::functions::bw_to_bits;
 use sdfgen::functions::bit_compressor;
@@ -27,6 +33,7 @@ fn main() {
 	opts.optopt ("s","size","size of the output signed distance field image, must be a power of 2. Defaults to input size / 4","OUTPUT_SIZE");
 	opts.optopt ( "","maxdst","saturation distance (i.e. 'most far away meaningful distance') in half pixels of the input image. Defaults to input size / 4","SATURATION_DISTANCE");
 	opts.optopt ( "","save-mipmaps","save the mipmaps used for accelerated calculation to BASENAMEi.png, where 'i' is the mipmap level","BASENAME");
+	opts.optopt ("t","type","One of 'png', 'f32', 'f64'. f32 and f64 are raw floating point formats. Default: png","TYPE");
 	if args.len() == 1 {
 		print_usage(&program_name, &opts);
 		return;
@@ -92,9 +99,48 @@ fn main() {
 	if verbose {
 		println!("Doing a final color space conversion.");
 	}
-	let sdf_u8 = sdf_to_grayscale_image(&(*sdf), sat_dst);
-	if verbose {
-		println!("Saving signed distance field image as '{}'.", output_image_name);
-	}
-	sdf_u8.save(output_image_name).unwrap();
+	let output_type = match parsed_opts.opt_str("type") {
+		Some(s) => s,
+		None    => format!("png") // FIXME we don't really need "format!" here
+	};
+	match output_type.as_ref() {
+		"png" => {
+			let sdf_u8 = sdf_to_grayscale_image(&(*sdf), sat_dst);
+			if verbose {
+				println!("Saving signed distance field image in png format as '{}'.", output_image_name);
+			}
+			let mut outf = File::create(output_image_name).unwrap();
+			let mut pngenc = image::png::PNGEncoder::<std::fs::File>::new(&mut outf);
+			let (w,h) = sdf_u8.dimensions();
+			pngenc.encode(sdf_u8.into_raw().as_ref(), w, h, image::ColorType::Gray(8)).unwrap();
+			//sdf_u8.save(output_image_name).unwrap();
+		}
+		// TODO: remove code duplication here
+		"f64" => {
+			let mut buf = vec![];
+			for px in sdf.into_raw() {
+				buf.write_f64::<LittleEndian>(px).unwrap();
+			}
+			if verbose {
+				println!("Saving signed distance field image in f64 raw format as '{}'", output_image_name);
+			}
+			let mut outf = File::create(output_image_name).unwrap();
+			outf.write_all(buf.as_ref()).unwrap();
+		}
+		"f32" => {
+			let mut buf = vec![];
+			for px in sdf.into_raw() {
+				buf.write_f32::<LittleEndian>(px as f32).unwrap();
+			}
+			if verbose {
+				println!("Saving signed distance field image in f32 raw format as '{}'", output_image_name);
+			}
+			let mut outf = File::create(output_image_name).unwrap();
+			outf.write_all(buf.as_ref()).unwrap();
+		}
+		_ => {
+			panic!("Unknown output format: {}", output_type);
+		}
+	};
+
 }
