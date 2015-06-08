@@ -2,11 +2,13 @@ use std::cmp::Ord;
 use std::cmp::Eq;
 use std::cmp::Ordering;
 
+use sdf_algorithm::DstT;
+
 pub struct SdfTask {
 	pub x: u32,
 	pub y: u32,
 	pub level: u8,
-	pub best_case_dst_sqr: f32,
+	pub best_case_dst_sqr: DstT,
 }
 
 impl PartialEq for SdfTask {

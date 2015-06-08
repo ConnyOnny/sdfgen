@@ -55,7 +55,7 @@ pub fn log2(x: u64) -> Option<u8> {
 		let shiftedi : u64 = 1<<i as u64;
 		let andedx : u64 = x & shiftedi;
 		if andedx == x {
-			return Some(i); 
+			return Some(i);
 		}
 	}
 	None
