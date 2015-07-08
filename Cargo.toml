@@ -9,6 +9,7 @@ authors = [ "Constantin Berhard <sdfgen.8.enormator@xoxy.net>" ]
 name = "sdfgen"
 
 [dependencies]
-image="0.3.10"
-getopts="0.2"
-byteorder="0.3"
+image="*"
+getopts="*"
+byteorder="*"
+num="*"
