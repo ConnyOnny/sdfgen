@@ -95,7 +95,8 @@ fn main() {
 	if verbose {
 		println!("Calculating signed distance field of size {} with saturation distance {}.", sdf_size, sat_dst);
 	}
-	let sdf = calculate_sdf(&mipmap, sdf_size);
+	let mipmap_arc = std::sync::Arc::new(mipmap);
+	let sdf = calculate_sdf(mipmap_arc.clone(), sdf_size, 4);
 	if verbose {
 		println!("Doing a final color space conversion.");
 	}
