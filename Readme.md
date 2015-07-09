@@ -36,12 +36,16 @@ You need Rust. The dependencies (image and getopts) are on crates.io so they wil
 		--save-mipmaps BASENAME
 		                    save the mipmaps used for accelerated calculation to
 		                    BASENAMEi.png, where 'i' is the mipmap level
+		-t --type TYPE      One of 'png', 'f32', 'f64'. f32 and f64 are raw
+		                    floating point formats. Default: png
+		--threads THREADCOUNT
+		                    How many CPU computing threads to use.
 
 ### Example
 
 Get yourself some vector graphic. This might be letters of a font or it might be something else. I use this one: https://openclipart.org/detail/214643/black-cat-blackandwhite
 
-Render the image really large. I used 6000px height here. Then make the background white instead of transparent (that's important!) and added a white border s.t. the image resolution was a power of two (8192x8192 px in my case). This will look something like this (but way larger):
+Render the image really large. I used 6000px height here. Then make the background white instead of transparent (that's important!) and add a white border s.t. the image resolution is a power of two (8192x8192 px in my case). This will look something like this (but way larger):
 
 ![input image: a cat](http://cberhard.de/github/sdfgen/cat256.png)
 
