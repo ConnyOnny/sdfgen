@@ -6,6 +6,7 @@ dependencies = [
  "getopts 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "image 0.3.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ "simple_parallel 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -98,5 +99,10 @@ dependencies = [
 [[package]]
 name = "rustc-serialize"
 version = "0.3.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "simple_parallel"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 

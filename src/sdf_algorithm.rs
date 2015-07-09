@@ -1,5 +1,6 @@
 extern crate image;
 extern crate num;
+extern crate simple_parallel;
 
 use self::image::GrayImage;
 use self::image::ImageBuffer;
@@ -9,7 +10,6 @@ pub type SDFImage = image::ImageBuffer<image::Luma<f64>, Vec<f64>>;
 use std::f32;
 use std::collections::BinaryHeap;
 use std::sync::Arc;
-use std::thread;
 
 use mipmap::*;
 use functions::*;
@@ -143,8 +143,20 @@ fn chunkslen (arrlen: usize, n: usize) -> usize {
 pub fn calculate_sdf_region(dst: &mut[f64], dstwidth: usize, startidx: usize, mm: Arc<Mipmap>, dst_level: u8) {
 	for idx in startidx..startidx+dst.len() {
 		let (x,y) = idx2point(idx, dstwidth);
-		dst[idx] = calculate_sdf_at(&mm, x as u32, y as u32, dst_level);
+		dst[idx-startidx] = calculate_sdf_at(&mm, x as u32, y as u32, dst_level);
 	}
+}
+
+struct WorkerArgs<'a> {
+	dst: &'a mut[f64],
+	dstwidth: usize,
+	startidx: usize,
+	mm: Arc<Mipmap>,
+	dst_level: u8,
+}
+
+fn worker (a: WorkerArgs) {
+	calculate_sdf_region(a.dst, a.dstwidth, a.startidx, a.mm, a.dst_level)
 }
 
 pub fn calculate_sdf(mm: Arc<Mipmap>, size: u32, n_threads: usize) -> Box<SDFImage> {
@@ -161,22 +173,22 @@ pub fn calculate_sdf(mm: Arc<Mipmap>, size: u32, n_threads: usize) -> Box<SDFIma
 		}
 	}
 	let dst_level = mm.get_max_level() - log2(size as u64).expect("destination size must be a power of two");
-	let mut results = Arc::new(vec![0f64; (size*size) as usize]);
+	let mut results = vec![0f64; (size*size) as usize];
+	let chunklen = chunkslen(results.len(), n_threads);
 	{
-		let mut result_chunks = results.chunks_mut(chunkslen(results.len(), n_threads));
-		let mut children = vec![];
-		let mut current_startidx = 0;
-		for result_chunk in result_chunks {
-			let chunklen = result_chunk.len();
-			let mmclone = mm.clone();
-			children.push(thread::spawn(move || { calculate_sdf_region(result_chunk,size as usize,current_startidx,mmclone,dst_level) }));
-			current_startidx += chunklen;
+		let result_chunks = results.chunks_mut(chunklen);
+		assert_eq!(result_chunks.len(), n_threads);
+		let mut args: Vec<WorkerArgs> = vec![];
+		let mut currentidx = 0;
+		for chunk in result_chunks {
+			let chunklen = chunk.len();
+			args.push(WorkerArgs { dst: chunk, dstwidth: size as usize, startidx: currentidx, mm:mm.clone(), dst_level:dst_level});
+			currentidx += chunklen;
 		}
-		for child in children {
-			child.join().ok();
-		}
+		let mut pool = simple_parallel::Pool::new(n_threads);
+		pool.for_(args, worker);
 	}
-	Box::new(SDFImage::from_raw(size,size,*results).unwrap())
+	Box::new(SDFImage::from_raw(size,size,results).unwrap())
 	//let mut results = 
 	/*let mut results = Box::new(SDFImage::new(size,size));
 	for y in 0..size {

@@ -34,6 +34,7 @@ fn main() {
 	opts.optopt ( "","maxdst","saturation distance (i.e. 'most far away meaningful distance') in half pixels of the input image. Defaults to input size / 4","SATURATION_DISTANCE");
 	opts.optopt ( "","save-mipmaps","save the mipmaps used for accelerated calculation to BASENAMEi.png, where 'i' is the mipmap level","BASENAME");
 	opts.optopt ("t","type","One of 'png', 'f32', 'f64'. f32 and f64 are raw floating point formats. Default: png","TYPE");
+	opts.optopt ( "","threads","How many CPU computing threads to use.","THREADCOUNT");
 	if args.len() == 1 {
 		print_usage(&program_name, &opts);
 		return;
@@ -92,11 +93,15 @@ fn main() {
 		Some(s) => { s.parse::<DstT>().unwrap() }
 		None	=> { (input_size / 4) as DstT }
 	};
+	let n_threads : usize = match parsed_opts.opt_str("threads") {
+		Some(s) => s.parse::<usize>().unwrap(),
+		None    => 1,
+	};
 	if verbose {
-		println!("Calculating signed distance field of size {} with saturation distance {}.", sdf_size, sat_dst);
+		println!("Calculating signed distance field of size {} with saturation distance {} using {} thread(s)", sdf_size, sat_dst, n_threads);
 	}
 	let mipmap_arc = std::sync::Arc::new(mipmap);
-	let sdf = calculate_sdf(mipmap_arc.clone(), sdf_size, 4);
+	let sdf = calculate_sdf(mipmap_arc.clone(), sdf_size, n_threads);
 	if verbose {
 		println!("Doing a final color space conversion.");
 	}
