@@ -95,7 +95,7 @@ fn main() {
 	};
 	let n_threads : usize = match parsed_opts.opt_str("threads") {
 		Some(s) => s.parse::<usize>().unwrap(),
-		None    => 1,
+		None    => 32,
 	};
 	if verbose {
 		println!("Calculating signed distance field of size {} with saturation distance {} using {} thread(s)", sdf_size, sat_dst, n_threads);
