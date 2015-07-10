@@ -8,8 +8,8 @@ pub type DstT = f64;
 pub type SDFImage = image::ImageBuffer<image::Luma<f64>, Vec<f64>>;
 
 use std::f32;
-use std::collections::BinaryHeap;
 use std::sync::Arc;
+use std::cmp;
 
 use mipmap::*;
 use functions::*;
@@ -52,50 +52,53 @@ pub fn sdf_to_grayscale_image(src: &SDFImage, max_expressable_dst: DstT) -> Box<
 	Box::new(ImageBuffer::<image::Luma<u8>>::from_fn(width, height, fun))
 }
 
-fn calculate_sdf_at(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8) -> f64 {
-	let mmget = |x:u32,y:u32,level:u8| -> u8 {
-		mm.images[level as usize].get_pixel(x,y).data[0]
-	};
-	let pxpos = Mipmap::get_center(x,y,dst_level);
-	let px_is_white = is_white(mm.get_value(&pxpos));
-	let has_needed = |v:u8| -> bool { // this could probably be done more efficiently...
-		if px_is_white {
-			has_black(v)
-		} else {
-			has_white(v)
-		}
-	};
-	let mut best_dst_sqr : DstT = f32::INFINITY as DstT;
-	let mut tasks = BinaryHeap::<SdfTask>::new();
-	tasks.push(create_task(x,y,0,0,mm.get_max_level()));
-	while let Some(task) = tasks.pop() {
-		if task.best_case_dst_sqr < best_dst_sqr {
-			// there could be something valuable in here
-			let mmval = mmget(task.x,task.y,task.level);
-			debug_assert!(has_needed(mmval));
-			if task.level == 0 {
-				debug_assert_eq!(task.best_case_dst_sqr, dst_sqr(&pxpos, &Mipmap::get_center(task.x,task.y,0)));
-				if task.best_case_dst_sqr < best_dst_sqr {
-					best_dst_sqr = task.best_case_dst_sqr;
-				}
-			} else {
-				let children = Mipmap::get_children(task.x,task.y);
-				let new_level = task.level - 1;
-				for tup in children.into_iter() {
-					let (cx,cy) = *tup;
-					if has_needed(mmget(cx,cy,new_level))  {
-						let mindstsqr = min_dst_sqr(&pxpos,cx,cy,new_level);
-						if mindstsqr < best_dst_sqr {
-							tasks.push(SdfTask{x:cx,y:cy,level:new_level,best_case_dst_sqr:mindstsqr});
-						}
-					}
+#[inline]
+fn mmget(mm: &Arc<Mipmap>, x:u32, y:u32, level:u8) -> u8 {
+	mm.images[level as usize].get_pixel(x,y).data[0]
+}
+
+#[inline]
+fn has_needed(val:u8, needed:u8) -> bool {
+	val & needed != 0
+}
+
+fn calculate_sdf_at_rec(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8, best_dst_sqr_input: DstT, task: &SdfTask, needed: u8, pxpos: &UniPoint) -> DstT {
+	debug_assert!(task.best_case_dst_sqr < best_dst_sqr_input); // if not we shouldn't have been called
+	debug_assert!(has_needed(mmget(mm,task.x,task.y,task.level), needed));
+	let mut best_dst_sqr = best_dst_sqr_input;
+	if task.level == 0 {
+		best_dst_sqr.min(task.best_case_dst_sqr)
+	} else {
+		let children:[(u32,u32);4] = Mipmap::get_children(task.x,task.y);
+		let new_level = task.level - 1;
+		let mut child_tasks = vec![];
+		for tup in children.into_iter() {
+			let (cx,cy) = *tup;
+			if has_needed(mmget(mm,cx,cy,new_level),needed)  {
+				let mindstsqr = min_dst_sqr(pxpos,cx,cy,new_level);
+				if mindstsqr < best_dst_sqr {
+					child_tasks.push(SdfTask{x:cx,y:cy,level:new_level,best_case_dst_sqr:mindstsqr});
 				}
 			}
 		}
-	} // done with tasks
+		child_tasks.sort_by(|a:&SdfTask,b:&SdfTask| -> cmp::Ordering { a.best_case_dst_sqr.partial_cmp(&b.best_case_dst_sqr).unwrap() });
+		for child_task in child_tasks {
+			if child_task.best_case_dst_sqr < best_dst_sqr {
+				best_dst_sqr = calculate_sdf_at_rec(mm, x, y, dst_level, best_dst_sqr, &child_task, needed, pxpos);
+			}
+		}
+		best_dst_sqr
+	}
+}
+
+fn calculate_sdf_at(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8) -> f64 {
+	let pxpos = Mipmap::get_center(x,y,dst_level);
+	let pxval = mm.get_value(&pxpos);
+	let task = create_task(x,y,0,0,mm.get_max_level());
+	let best_dst_sqr = calculate_sdf_at_rec(mm, x, y, dst_level, f32::INFINITY as DstT, &task, get_needed(pxval), &pxpos);
 	// use high precision math here to avoid rounding errors
 	let mut best_dst : DstT = (best_dst_sqr as f64).sqrt() as DstT;
-	if !px_is_white {
+	if is_black(pxval) {
 		best_dst *= -1 as DstT;
 	}
 	best_dst
@@ -113,25 +116,6 @@ fn idx2pointtest () {
 	assert_eq!(idx2point(5,5),(0,1));
 	assert_eq!(idx2point(22,5),(2,4));
 }
-/*
-fn splitnrec<T> (arr: &mut[T], splitlen: usize) -> Vec<&mut[T]> {
-	if arr.len() <= splitlen {
-		vec![arr]
-	} else {
-		let (hd,tl) = arr.split_at_mut(splitlen);
-		let mut ret = splitnrec(tl, splitlen);
-		ret.push(hd);
-		ret
-	}
-}
-
-fn splitn<T> (arr: &mut[T], n: usize) -> Vec<&mut[T]> {
-	let splitlen = match num::integer::div_rem(arr.len(),n) {
-		(x,0) => x,
-		(x,_) => x+1,
-	};
-	splitnrec(arr, splitlen)
-}*/
 
 fn chunkslen (arrlen: usize, n: usize) -> usize {
 	match num::integer::div_rem(arrlen,n) {
@@ -189,13 +173,4 @@ pub fn calculate_sdf(mm: Arc<Mipmap>, size: u32, n_threads: usize) -> Box<SDFIma
 		pool.for_(args, worker);
 	}
 	Box::new(SDFImage::from_raw(size,size,results).unwrap())
-	//let mut results = 
-	/*let mut results = Box::new(SDFImage::new(size,size));
-	for y in 0..size {
-		for x in 0..size {
-			let best_dst:f64 = calculate_sdf_at(&mm, x, y, dst_level);
-			results.put_pixel(x,y,image::Luma{data:[best_dst]});
-		}
-	}
-	results*/
 }

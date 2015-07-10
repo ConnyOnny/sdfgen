@@ -40,6 +40,15 @@ pub fn has_black (v:u8) -> bool {
 	v & HAS_BLACK_BIT != 0
 }
 
+pub fn get_needed (v:u8) -> u8 {
+	debug_assert!(is_white(v) || is_black(v));
+	if v & HAS_WHITE_BIT != 0 {
+		HAS_BLACK_BIT
+	} else {
+		HAS_WHITE_BIT
+	}
+}
+
 pub fn is_white (v:u8) -> bool {
 	debug_assert!(!has_black_and_white(v));
 	v & HAS_WHITE_BIT != 0
