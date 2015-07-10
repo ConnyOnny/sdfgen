@@ -85,6 +85,9 @@ fn calculate_sdf_at_rec(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8, best_dst
 		for child_task in child_tasks {
 			if child_task.best_case_dst_sqr < best_dst_sqr {
 				best_dst_sqr = calculate_sdf_at_rec(mm, x, y, dst_level, best_dst_sqr, &child_task, needed, pxpos);
+			} else {
+				// because the tasks are sorted, no other can be relevant at this point
+				break;
 			}
 		}
 		best_dst_sqr
