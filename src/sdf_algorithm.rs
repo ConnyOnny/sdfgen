@@ -66,23 +66,35 @@ fn calculate_sdf_at_rec(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8, best_dst
 	debug_assert!(task.best_case_dst_sqr < best_dst_sqr_input); // if not we shouldn't have been called
 	debug_assert!(has_needed(mmget(mm,task.x,task.y,task.level), needed));
 	let mut best_dst_sqr = best_dst_sqr_input;
-	if task.level == 0 {
-		best_dst_sqr.min(task.best_case_dst_sqr)
+	debug_assert!(task.level > 0);
+	let children:[(u32,u32);4] = Mipmap::get_children(task.x,task.y);
+	let new_level = task.level - 1;
+	if new_level == 0 {
+		for tup in children.into_iter() {
+			let (cx,cy) = *tup;
+			if has_needed(mmget(mm,cx,cy,new_level),needed)  {
+				let dstsqr = dst_sqr(pxpos,&Mipmap::get_center(cx,cy,0));
+				if dstsqr < best_dst_sqr {
+					best_dst_sqr = dstsqr;
+				}
+			}
+		}
 	} else {
-		let children:[(u32,u32);4] = Mipmap::get_children(task.x,task.y);
-		let new_level = task.level - 1;
-		let mut child_tasks = vec![];
+		let mut child_tasks = [SdfTask{x:0,y:0,level:0,best_case_dst_sqr:0f64};4];
+		let mut child_tasks_idx=0;
 		for tup in children.into_iter() {
 			let (cx,cy) = *tup;
 			if has_needed(mmget(mm,cx,cy,new_level),needed)  {
 				let mindstsqr = min_dst_sqr(pxpos,cx,cy,new_level);
 				if mindstsqr < best_dst_sqr {
-					child_tasks.push(SdfTask{x:cx,y:cy,level:new_level,best_case_dst_sqr:mindstsqr});
+					child_tasks[child_tasks_idx] = SdfTask{x:cx,y:cy,level:new_level,best_case_dst_sqr:mindstsqr};
+					child_tasks_idx += 1;
 				}
 			}
 		}
-		child_tasks.sort_by(|a:&SdfTask,b:&SdfTask| -> cmp::Ordering { a.best_case_dst_sqr.partial_cmp(&b.best_case_dst_sqr).unwrap() });
-		for child_task in child_tasks {
+		let mut child_tasks_slice = &mut child_tasks[0..child_tasks_idx];
+		child_tasks_slice.sort_by(|a:&SdfTask,b:&SdfTask| -> cmp::Ordering { a.best_case_dst_sqr.partial_cmp(&b.best_case_dst_sqr).unwrap() });
+		for child_task in child_tasks_slice {
 			if child_task.best_case_dst_sqr < best_dst_sqr {
 				best_dst_sqr = calculate_sdf_at_rec(mm, x, y, dst_level, best_dst_sqr, &child_task, needed, pxpos);
 			} else {
@@ -90,8 +102,8 @@ fn calculate_sdf_at_rec(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8, best_dst
 				break;
 			}
 		}
-		best_dst_sqr
 	}
+	best_dst_sqr
 }
 
 fn calculate_sdf_at(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8) -> f64 {

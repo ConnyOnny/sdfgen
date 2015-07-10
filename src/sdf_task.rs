@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 
 use sdf_algorithm::DstT;
 
+#[derive(Copy,Clone)]
 pub struct SdfTask {
 	pub x: u32,
 	pub y: u32,
