@@ -1,3 +1,5 @@
+[![Clippy Linting Result](https://clippy.bashy.io/github/ConnyOnny/sdfgen/master/badge.svg)](https://clippy.bashy.io/github/ConnyOnny/sdfgen/master/log)
+
 # Signed Distance Field Generator
 
 ## What's a Signed Distance Field?
