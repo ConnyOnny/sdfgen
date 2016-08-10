@@ -33,7 +33,7 @@ fn main() {
 	opts.optopt ("s","size","size of the output signed distance field image, must be a power of 2. Defaults to input size / 4","OUTPUT_SIZE");
 	opts.optopt ( "","maxdst","saturation distance (i.e. 'most far away meaningful distance') in half pixels of the input image. Defaults to input size / 4","SATURATION_DISTANCE");
 	opts.optopt ( "","save-mipmaps","save the mipmaps used for accelerated calculation to BASENAMEi.png, where 'i' is the mipmap level","BASENAME");
-	opts.optopt ("t","type","One of 'png', 'f32', 'f64'. f32 and f64 are raw floating point formats. Default: png","TYPE");
+	opts.optopt ("t","type","One of 'png', 'u16', 'f32', 'f64'. f32 and f64 are raw floating point formats, u16 is raw unsigned 16 bit integers. Default: png","TYPE");
 	opts.optopt ( "","threads","How many CPU computing threads to use.","THREADCOUNT");
 	if args.len() == 1 {
 		print_usage(&program_name, &opts);
@@ -95,7 +95,7 @@ fn main() {
 	};
 	let n_threads : usize = match parsed_opts.opt_str("threads") {
 		Some(s) => s.parse::<usize>().unwrap(),
-		None    => 32,
+		None	=> 32,
 	};
 	if verbose {
 		println!("Calculating signed distance field of size {} with saturation distance {} using {} thread(s)", sdf_size, sat_dst, n_threads);
@@ -107,7 +107,7 @@ fn main() {
 	}
 	let output_type = match parsed_opts.opt_str("type") {
 		Some(s) => s,
-		None    => format!("png") // FIXME we don't really need "format!" here
+		None	=> format!("png") // FIXME we don't really need "format!" here
 	};
 	match output_type.as_ref() {
 		"png" => {
@@ -119,9 +119,29 @@ fn main() {
 			let pngenc = image::png::PNGEncoder::<std::fs::File>::new(outf);
 			let (w,h) = sdf_u8.dimensions();
 			pngenc.encode(sdf_u8.into_raw().as_ref(), w, h, image::ColorType::Gray(8)).unwrap();
-			//sdf_u8.save(output_image_name).unwrap();
 		}
 		// TODO: remove code duplication here
+		"u16" => {
+			let mut buf = vec![];
+			for px in sdf.into_raw() {
+				let mut dst = px;
+				dst = dst / sat_dst * 32767_f64;
+				if dst < -32767_f64 {
+					dst = -32767_f64;
+				} else if dst > 32767_f64 {
+					dst = 32767_f64;
+				}
+				debug_assert!(dst <= 32767_f64);
+				debug_assert!(dst >= -32767_f64);
+				let v:u16 = (dst as i32 + 32767) as u16;
+				buf.write_u16::<LittleEndian>(v).unwrap();
+			}
+			if verbose {
+				println!("Saving signed distance field image in u16 raw format as '{}'", output_image_name);
+			}
+			let mut outf = File::create(output_image_name).unwrap();
+			outf.write_all(buf.as_ref()).unwrap();
+		}
 		"f64" => {
 			let mut buf = vec![];
 			for px in sdf.into_raw() {

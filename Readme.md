@@ -38,8 +38,9 @@ You need Rust. The dependencies (image and getopts) are on crates.io so they wil
 		--save-mipmaps BASENAME
 		                    save the mipmaps used for accelerated calculation to
 		                    BASENAMEi.png, where 'i' is the mipmap level
-		-t --type TYPE      One of 'png', 'f32', 'f64'. f32 and f64 are raw
-		                    floating point formats. Default: png
+		-t, --type TYPE     One of 'png', 'u16', 'f32', 'f64'. f32 and f64 are raw
+		                    floating point formats, u16 is raw unsigned 16 bit
+		                    integers. Default: png
 		--threads THREADCOUNT
 		                    How many CPU computing threads to use.
 
@@ -70,3 +71,13 @@ With normal (bilinear) filtering it would have looked like this:
 But this is not all you can do with an SDF texture. Your pixel shader can also map the different distances to different colors. You can simulate this outside OpenGL with [Gimp](http://en.wikipedia.org/wiki/GIMP)s [Gradient Map](http://docs.gimp.org/en/plug-in-gradmap.html) tool (Colors -> Map -> To Gradient).
 
 ![artistic shader using SDF](http://cberhard.de/github/sdfgen/catsdfarts.jpg)
+
+### 16 Bit PNG
+
+Unfortunately the image library in use does not (yet?) support exporting PNG images with 16 bit color depth.
+You can however use the output mode `u16` and convert it to a PNG16 using ImageMagick like so:
+
+    convert -depth 16 -size 512x512 gray:sdf_file -depth 16 out.png
+
+For the `-size` parameter you must use the actual size of the output image.
+This is e.g. useful to open the signed distance field in GIMP (version 2.9 or newer) for further manipulation.
