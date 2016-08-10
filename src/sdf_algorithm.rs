@@ -49,7 +49,7 @@ pub fn sdf_to_grayscale_image(src: &SDFImage, max_expressable_dst: DstT) -> Box<
 			let v:u8 = (dst as i32 + 127) as u8;
 			image::Luma{data:[v]}
 		};
-	Box::new(ImageBuffer::<image::Luma<u8>>::from_fn(width, height, fun))
+	Box::new(ImageBuffer::from_fn(width, height, fun))
 }
 
 #[inline]

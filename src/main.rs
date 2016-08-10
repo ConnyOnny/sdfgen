@@ -115,8 +115,8 @@ fn main() {
 			if verbose {
 				println!("Saving signed distance field image in png format as '{}'.", output_image_name);
 			}
-			let mut outf = File::create(output_image_name).unwrap();
-			let mut pngenc = image::png::PNGEncoder::<std::fs::File>::new(&mut outf);
+			let outf = File::create(output_image_name).unwrap();
+			let pngenc = image::png::PNGEncoder::<std::fs::File>::new(outf);
 			let (w,h) = sdf_u8.dimensions();
 			pngenc.encode(sdf_u8.into_raw().as_ref(), w, h, image::ColorType::Gray(8)).unwrap();
 			//sdf_u8.save(output_image_name).unwrap();

@@ -91,7 +91,7 @@ impl Mipmap {
 					let d = bigimg.get_pixel(x*2+1,y*2+1).data[0];
 					image::Luma{data:[compressor(a,b,c,d)]}
 				};
-				ImageBuffer::<image::Luma<u8>>::from_fn(1<<smallsizelog as u32, 1<<smallsizelog as u32,smallifier)
+				ImageBuffer::from_fn(1<<smallsizelog as u32, 1<<smallsizelog as u32,smallifier)
 			};
 			ret.images.push(smallimg);
 		}
