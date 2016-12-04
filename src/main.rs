@@ -81,7 +81,7 @@ fn main() {
 			println!("Saving Mipmaps to {}[0..{}].png", basename, mipmap.get_max_level()+1);
 		}
 		for i in 0..mipmap.get_max_level()+1 {
-			mipmap.images[i as usize].save(format!("/home/c/mipmap {}.png",i)).unwrap();
+			mipmap.images[i as usize].save(format!("{}{}.png", basename, i)).unwrap();
 		}
 	}
 	let sdf_size = match parsed_opts.opt_str("size") {
