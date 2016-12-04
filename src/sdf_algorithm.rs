@@ -133,8 +133,7 @@ fn idx2pointtest () {
 	assert_eq!(idx2point(22,5),(2,4));
 }
 
-pub fn calculate_sdf(mm: Arc<Mipmap>, size: u32, n_threads: usize) -> Box<SDFImage> {
-	assert!(n_threads > 0);
+pub fn calculate_sdf(mm: Arc<Mipmap>, size: u32) -> Box<SDFImage> {
 	{
 		let coarsest_val = mm.images.last().expect("Mipmap had no images at all").get_pixel(0,0).data[0];
 		if !has_black_and_white(coarsest_val) {
