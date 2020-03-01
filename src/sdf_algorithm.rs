@@ -38,7 +38,7 @@ fn create_task(x:u32, y:u32, mmx:u32, mmy:u32, mmlevel:u8) -> SdfTask {
 pub fn sdf_to_grayscale_image(src: &SDFImage, max_expressable_dst: DstT) -> Box<GrayImage> {
 	let (width,height) = src.dimensions();
 	let fun = |x:u32,y:u32| -> image::Luma<u8> {
-			let mut dst : DstT = src.get_pixel(x,y).data[0];
+			let mut dst : DstT = src.get_pixel(x,y)[0];
 			dst = dst / max_expressable_dst * (127 as DstT);
 			if dst < (-127 as DstT) {
 				dst = -127 as DstT;
@@ -48,14 +48,14 @@ pub fn sdf_to_grayscale_image(src: &SDFImage, max_expressable_dst: DstT) -> Box<
 			debug_assert!(dst <= ( 127 as DstT));
 			debug_assert!(dst >= (-127 as DstT));
 			let v:u8 = (dst as i32 + 127) as u8;
-			image::Luma{data:[v]}
+			image::Luma([v])
 		};
 	Box::new(ImageBuffer::from_fn(width, height, fun))
 }
 
 #[inline]
 fn mmget(mm: &Arc<Mipmap>, x:u32, y:u32, level:u8) -> u8 {
-	mm.images[level as usize].get_pixel(x,y).data[0]
+	mm.images[level as usize].get_pixel(x,y)[0]
 }
 
 #[inline]
@@ -71,7 +71,7 @@ fn calculate_sdf_at_rec(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8, best_dst
 	let children:[(u32,u32);4] = Mipmap::get_children(task.x,task.y);
 	let new_level = task.level - 1;
 	if new_level == 0 {
-		for tup in children.into_iter() {
+		for tup in children.iter() {
 			let (cx,cy) = *tup;
 			if has_needed(mmget(mm,cx,cy,new_level),needed)  {
 				let dstsqr = dst_sqr(pxpos,&Mipmap::get_center(cx,cy,0));
@@ -83,7 +83,7 @@ fn calculate_sdf_at_rec(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8, best_dst
 	} else {
 		let mut child_tasks = [SdfTask{x:0,y:0,level:0,best_case_dst_sqr:0f64};4];
 		let mut child_tasks_idx=0;
-		for tup in children.into_iter() {
+		for tup in children.iter() {
 			let (cx,cy) = *tup;
 			if has_needed(mmget(mm,cx,cy,new_level),needed)  {
 				let mindstsqr = min_dst_sqr(pxpos,cx,cy,new_level);
@@ -93,7 +93,7 @@ fn calculate_sdf_at_rec(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8, best_dst
 				}
 			}
 		}
-		let mut child_tasks_slice = &mut child_tasks[0..child_tasks_idx];
+		let child_tasks_slice = &mut child_tasks[0..child_tasks_idx];
 		child_tasks_slice.sort_by(|a:&SdfTask,b:&SdfTask| -> cmp::Ordering { a.best_case_dst_sqr.partial_cmp(&b.best_case_dst_sqr).unwrap() });
 		for child_task in child_tasks_slice {
 			if child_task.best_case_dst_sqr < best_dst_sqr {
@@ -135,14 +135,14 @@ fn idx2pointtest () {
 
 pub fn calculate_sdf(mm: Arc<Mipmap>, size: u32) -> Box<SDFImage> {
 	{
-		let coarsest_val = mm.images.last().expect("Mipmap had no images at all").get_pixel(0,0).data[0];
+		let coarsest_val = mm.images.last().expect("Mipmap had no images at all").get_pixel(0,0)[0];
 		if !has_black_and_white(coarsest_val) {
 			// image has only one color -> everywhere is the maximum distance
 			debug_assert!(has_black(coarsest_val) || has_white(coarsest_val), "Mipmap is wrong: Image seems to have neither black nor white pixels");
 			let inf = f32::INFINITY as DstT;
 			let neginf = f32::NEG_INFINITY as DstT;
 			let dst_val : DstT = if has_black(coarsest_val) { neginf } else { inf };
-			return Box::new(SDFImage::from_pixel(size,size,image::Luma{data:[dst_val]}))
+			return Box::new(SDFImage::from_pixel(size,size,image::Luma([dst_val])))
 		}
 	}
 	let dst_level = mm.get_max_level() - log2(size as u64).expect("destination size must be a power of two");
