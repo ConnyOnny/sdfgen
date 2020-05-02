@@ -64,7 +64,7 @@ fn main() {
 		println!("Converting image to binary.");
 	}
 	for px in img.pixels_mut() {
-		px.data[0] = bw_to_bits(px.data[0]);
+		px[0] = bw_to_bits(px[0]);
 	}
 
 	if verbose {
@@ -113,7 +113,7 @@ fn main() {
 			let outf = File::create(output_image_name).unwrap();
 			let pngenc = image::png::PNGEncoder::<std::fs::File>::new(outf);
 			let (w,h) = sdf_u8.dimensions();
-			pngenc.encode(sdf_u8.into_raw().as_ref(), w, h, image::ColorType::Gray(8)).unwrap();
+			pngenc.encode(sdf_u8.into_raw().as_ref(), w, h, image::ColorType::L8).unwrap();
 		}
 		// TODO: remove code duplication here
 		"u16" => {

@@ -69,7 +69,7 @@ impl Mipmap {
 	pub fn get_value(self: &Mipmap, position: &UniPoint) -> u8 {
 		let x = position.x/2;
 		let y = position.y/2;
-		self.images[0].get_pixel(x,y).data[0]
+		self.images[0].get_pixel(x,y)[0]
 	}
 	pub fn new<F> (srcimg : GrayImage, compressor : F) -> Mipmap
 		where F : Fn(u8,u8,u8,u8) -> u8 {
@@ -85,11 +85,11 @@ impl Mipmap {
 				assert_eq!(bigimg.dimensions(), (1<<bigsizelog as u32, 1<<bigsizelog as u32));
 				let smallsizelog = sizelog-i;
 				let smallifier = |x:u32, y:u32| -> image::Luma<u8> {
-					let a = bigimg.get_pixel(x*2,y*2).data[0];
-					let b = bigimg.get_pixel(x*2+1,y*2).data[0];
-					let c = bigimg.get_pixel(x*2,y*2+1).data[0];
-					let d = bigimg.get_pixel(x*2+1,y*2+1).data[0];
-					image::Luma{data:[compressor(a,b,c,d)]}
+					let a = bigimg.get_pixel(x*2,y*2)[0];
+					let b = bigimg.get_pixel(x*2+1,y*2)[0];
+					let c = bigimg.get_pixel(x*2,y*2+1)[0];
+					let d = bigimg.get_pixel(x*2+1,y*2+1)[0];
+					image::Luma([compressor(a,b,c,d)])
 				};
 				ImageBuffer::from_fn(1<<smallsizelog as u32, 1<<smallsizelog as u32,smallifier)
 			};
