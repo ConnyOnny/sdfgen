@@ -107,12 +107,32 @@ fn main() {
 	match output_type.as_ref() {
 		"png" => {
 			let sdf_u8 = sdf_to_grayscale_image(&(*sdf), sat_dst);
+			let (w,h) = sdf_u8.dimensions();
+			// This design decision was done to be symmetric around 127
+			let saturated_value = 254_u8;
 			if verbose {
-				println!("Saving signed distance field image in png format as '{}'.", output_image_name);
+				let mut num_unsaturated_border_pixels = 0_usize;
+				for x in 0..w {
+					if sdf_u8.get_pixel(x, 0)[0] < saturated_value {
+						num_unsaturated_border_pixels += 1;
+					}
+					if sdf_u8.get_pixel(x, h - 1)[0] < saturated_value {
+						num_unsaturated_border_pixels += 1;
+					}
+				}
+				for y in 0..h {
+					if sdf_u8.get_pixel(0, y)[0] < saturated_value {
+						num_unsaturated_border_pixels += 1;
+					}
+					if sdf_u8.get_pixel(w - 1, y)[0] < saturated_value {
+						num_unsaturated_border_pixels += 1;
+					}
+				}
+				println!("Unsaturated border pixels: {}", num_unsaturated_border_pixels);
+				println!("Saving {}x{} signed distance field image in png format as '{}'.", w, h, output_image_name);
 			}
 			let outf = File::create(output_image_name).unwrap();
 			let pngenc = image::png::PNGEncoder::<std::fs::File>::new(outf);
-			let (w,h) = sdf_u8.dimensions();
 			pngenc.encode(sdf_u8.into_raw().as_ref(), w, h, image::ColorType::L8).unwrap();
 		}
 		// TODO: remove code duplication here
