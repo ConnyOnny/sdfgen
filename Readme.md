@@ -1,5 +1,3 @@
-[![Clippy Linting Result](https://clippy.bashy.io/github/ConnyOnny/sdfgen/master/badge.svg)](https://clippy.bashy.io/github/ConnyOnny/sdfgen/master/log)
-
 # Signed Distance Field Generator
 
 ## What's a Signed Distance Field?
@@ -48,7 +46,11 @@ You need Rust. The dependencies (image and getopts) are on crates.io so they wil
 
 Get yourself some vector graphic. This might be letters of a font or it might be something else. I use this one: https://openclipart.org/detail/214643/black-cat-blackandwhite
 
-Render the image really large. I used 6000px height here. Then make the background white instead of transparent (that's important!) and add a white border s.t. the image resolution is a power of two (8192x8192 px in my case). This will look something like this (but way larger):
+Render the image really large.
+I used 6000px height here.
+Then make the background white instead of transparent.
+A white border will automatically be added to the next power of two square canvas, e.g. an image of size 800x200 will be placed into a 1024x1024 canvas.
+This will look something like this (but way larger):
 
 ![input image: a cat](http://cberhard.de/github/sdfgen/cat256.png)
 
