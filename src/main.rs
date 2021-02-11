@@ -53,7 +53,7 @@ fn main() {
 	if verbose {
 		println!("Loading input image '{}'.", input_image_name);
 	}
-	let mut img : GrayImage = image::open(input_image_name).ok().expect("failed to load image").to_luma();
+	let mut img : GrayImage = image::open(input_image_name).ok().expect("failed to load image").to_luma8();
 	{
 		let (w,h) = img.dimensions();
 		if verbose {
@@ -158,7 +158,7 @@ fn main() {
 				println!("Saving {}x{} signed distance field image in png format as '{}'.", w, h, output_image_name);
 			}
 			let outf = File::create(output_image_name).unwrap();
-			let pngenc = image::png::PNGEncoder::<std::fs::File>::new(outf);
+			let pngenc = image::png::PngEncoder::<std::fs::File>::new(outf);
 			pngenc.encode(sdf_u8.into_raw().as_ref(), w, h, image::ColorType::L8).unwrap();
 		}
 		// TODO: remove code duplication here
