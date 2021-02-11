@@ -10,7 +10,7 @@ use image::GrayImage;
 
 use getopts::Options;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::{LittleEndian, BigEndian, WriteBytesExt};
 
 use sdfgen::functions::bw_to_bits;
 use sdfgen::functions::bit_compressor;
@@ -33,7 +33,7 @@ fn main() {
 	opts.optopt ("s","size","size of the output signed distance field image, must be a power of 2. Defaults to input size / 4","OUTPUT_SIZE");
 	opts.optopt ( "","maxdst","saturation distance (i.e. 'most far away meaningful distance') in half pixels of the input image. Defaults to input size / 4","SATURATION_DISTANCE");
 	opts.optopt ( "","save-mipmaps","save the mipmaps used for accelerated calculation to BASENAMEi.png, where 'i' is the mipmap level","BASENAME");
-	opts.optopt ("t","type","One of 'png', 'u16', 'f32', 'f64'. f32 and f64 are raw floating point formats, u16 is raw unsigned 16 bit integers. Default: png","TYPE");
+	opts.optopt ("t","type","One of 'png', 'png16', 'u16', 'f32', 'f64'. f32 and f64 are raw floating point formats, u16 is raw unsigned 16 bit integers. Default: png","TYPE");
 	if args.len() == 1 {
 		print_usage(&program_name, &opts);
 		return;
@@ -162,8 +162,16 @@ fn main() {
 			pngenc.encode(sdf_u8.into_raw().as_ref(), w, h, image::ColorType::L8).unwrap();
 		}
 		// TODO: remove code duplication here
-		"u16" => {
+		"u16" | "png16" => {
+			let (w,h) = &sdf.dimensions();
 			let mut buf = vec![];
+
+			let writer = if output_type == "u16" {
+				|b: &mut Vec<u8>, v| b.write_u16::<LittleEndian>(v)
+			} else {
+				|b: &mut Vec<u8>, v| b.write_u16::<BigEndian>(v)
+			};
+
 			for px in sdf.into_raw() {
 				let mut dst = px;
 				dst = dst / sat_dst * 32767_f64;
@@ -175,13 +183,19 @@ fn main() {
 				debug_assert!(dst <= 32767_f64);
 				debug_assert!(dst >= -32767_f64);
 				let v:u16 = (dst as i32 + 32767) as u16;
-				buf.write_u16::<LittleEndian>(v).unwrap();
+				writer(&mut buf, v).unwrap();
 			}
 			if verbose {
 				println!("Saving signed distance field image in u16 raw format as '{}'", output_image_name);
 			}
+
 			let mut outf = File::create(output_image_name).unwrap();
-			outf.write_all(buf.as_ref()).unwrap();
+			if output_type == "u16" {
+				outf.write_all(buf.as_ref()).unwrap();
+			} else {
+				let pngenc = image::png::PngEncoder::<std::fs::File>::new(outf);
+				pngenc.encode(buf.as_ref(), *w, *h, image::ColorType::L16).unwrap();
+			}
 		}
 		"f64" => {
 			let mut buf = vec![];
