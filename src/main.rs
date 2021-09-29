@@ -40,7 +40,7 @@ fn main() {
 	}
 	let parsed_opts = match opts.parse(&args[1..]) {
 		Ok(v) => { v }
-		Err(e) => { panic!(e.to_string()) }
+		Err(e) => { panic!("{}", e.to_string()) }
 	};
 	if parsed_opts.opt_present("help") || parsed_opts.free.len() != 2 {
 		print_usage(&program_name, &opts);
