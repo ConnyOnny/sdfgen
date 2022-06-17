@@ -107,7 +107,7 @@ fn calculate_sdf_at_rec(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8, best_dst
 	best_dst_sqr
 }
 
-fn calculate_sdf_at(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8) -> f64 {
+fn calculate_sdf_at(mm: &Arc<Mipmap>, x: u32, y:u32, dst_level: u8) -> DstT {
 	let pxpos = Mipmap::get_center(x,y,dst_level);
 	let pxval = mm.get_value(&pxpos);
 	let task = create_task(x,y,0,0,mm.get_max_level());
