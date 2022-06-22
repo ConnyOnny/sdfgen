@@ -114,9 +114,9 @@ fn main() {
 		Some(s) => { s.parse::<u32>().unwrap() }
 		None	=> { input_size / 4 }
 	};
-	let sat_dst : DstT = match parsed_opts.opt_str("maxdst") {
-		Some(s) => { s.parse::<DstT>().unwrap() }
-		None	=> { (input_size / 4) as DstT }
+	let sat_dst : f64 = match parsed_opts.opt_str("maxdst") {
+		Some(s) => { s.parse::<f64>().unwrap() }
+		None	=> { (input_size / 4) as f64 }
 	};
 	if verbose {
 		println!("Calculating signed distance field of size {} with saturation distance {}", sdf_size, sat_dst);
@@ -183,6 +183,7 @@ fn main() {
 				debug_assert!(dst <= 32767_f64);
 				debug_assert!(dst >= -32767_f64);
 				let v:u16 = (dst as i32 + 32767) as u16;
+				println!("{} -> {} -> {}", px, dst, v);
 				writer(&mut buf, v).unwrap();
 			}
 			if verbose {
